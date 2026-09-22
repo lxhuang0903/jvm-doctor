@@ -21,8 +21,8 @@ HERE = Path(__file__).parent
 ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from jvm_doctor import server  # noqa: E402
-from jvm_doctor.jcmd_flag import parse_jcmd_vm_flags_all  # noqa: E402
+from jvm_doctor import server
+from jvm_doctor.jcmd_flag import parse_jcmd_vm_flags_all
 
 JAVA = os.getenv("JAVA_HOME", str(Path.home() / ".sdkman/candidates/java/current"))
 JAVA_BIN = str(Path(JAVA) / "bin" / "java")

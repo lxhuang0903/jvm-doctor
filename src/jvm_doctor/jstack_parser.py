@@ -1,7 +1,6 @@
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
 
 # ===================== 配置项 =====================
 MAX_STACK_FRAMES = 10  # 栈深度截断：只保留前N帧
@@ -18,9 +17,9 @@ class LockInfo:
 class ThreadItem:
     name: str
     is_vm_gc_thread: bool          # True=GC/VM原生线程（无State，无java栈）
-    state_raw: Optional[str] = None # 完整状态字符串 "TIMED_WAITING (parking)"
-    stack_frames: List[str] = None
-    locks: List[LockInfo] = None
+    state_raw: str | None = None # 完整状态字符串 "TIMED_WAITING (parking)"
+    stack_frames: list[str] = None
+    locks: list[LockInfo] = None
 
     def __post_init__(self):
         if self.stack_frames is None:
@@ -28,7 +27,7 @@ class ThreadItem:
         if self.locks is None:
             self.locks = []
 
-    def get_normalized_stack_signature(self) -> Tuple[str, ...]:
+    def get_normalized_stack_signature(self) -> tuple[str, ...]:
         """
         归一化栈签名：
         - 有栈帧：正常归一化栈帧，剥离模块版本前缀，截断
@@ -49,16 +48,16 @@ class ThreadItem:
 @dataclass
 class DeadlockInfo:
     raw_text: str
-    thread_names: List[str]
+    thread_names: list[str]
 
 
 class JStackParser:
     def __init__(self, raw_text: str):
         self.raw = raw_text
         self.lines = [line.rstrip("\n") for line in self.raw.splitlines()]
-        self.threads: List[ThreadItem] = []
-        self.deadlock: Optional[DeadlockInfo] = None
-        self._deadlock_start_idx: Optional[int] = None
+        self.threads: list[ThreadItem] = []
+        self.deadlock: DeadlockInfo | None = None
+        self._deadlock_start_idx: int | None = None
         # 正则：匹配引号结束后，存在 #数字（Java线程标记）
         self.re_has_java_tid = re.compile(r'"[^"]+"\s+#\d+')
 
@@ -70,8 +69,8 @@ class JStackParser:
                 break
 
         # Step2: 分割成块，以空行分割，过滤噪音块
-        blocks: List[List[str]] = []
-        current_block: List[str] = []
+        blocks: list[list[str]] = []
+        current_block: list[str] = []
         for idx, line in enumerate(self.lines):
             # 到达死锁区域，停止主线程块解析
             if self._deadlock_start_idx is not None and idx >= self._deadlock_start_idx:
@@ -116,7 +115,7 @@ class JStackParser:
             dead_thread_names = re.findall(r'"([^"]+)":', deadlock_raw)
             self.deadlock = DeadlockInfo(raw_text=deadlock_raw, thread_names=dead_thread_names)
 
-    def _parse_vm_gc_thread(self, block: List[str]) -> ThreadItem:
+    def _parse_vm_gc_thread(self, block: list[str]) -> ThreadItem:
         """GC/VM原生线程，没有state、没有java栈"""
         head_line = block[0]
         m = re.match(r'"([^"]+)"', head_line)
@@ -126,14 +125,14 @@ class JStackParser:
             is_vm_gc_thread=True
         )
 
-    def _parse_java_thread(self, block: List[str]) -> ThreadItem:
+    def _parse_java_thread(self, block: list[str]) -> ThreadItem:
         """解析普通Java线程（带State + 栈帧+锁行）"""
         head_line = block[0]
         m = re.match(r'"([^"]+)"', head_line)
         thread_name = m.group(1) if m else "unknown"
-        state_raw: Optional[str] = None
+        state_raw: str | None = None
         stack_frames = []
-        locks: List[LockInfo] = []
+        locks: list[LockInfo] = []
 
         for line in block[1:]:
             line_stripped = line.strip()
@@ -160,9 +159,9 @@ class JStackParser:
             locks=locks
         )
 
-    def get_merged_stack_groups(self) -> List[dict]:
+    def get_merged_stack_groups(self) -> list[dict]:
         """按栈签名归并，相同栈合并计数；无栈线程各自独立分组"""
-        group_map: Dict[Tuple, List[ThreadItem]] = defaultdict(list)
+        group_map: dict[tuple, list[ThreadItem]] = defaultdict(list)
         for th in self.threads:
             sig = th.get_normalized_stack_signature()
             group_map[sig].append(th)
@@ -183,7 +182,7 @@ class JStackParser:
         result.sort(key=lambda x: x["count"], reverse=True)
         return result
 
-    def group_by_state(self) -> Dict[str, List[ThreadItem]]:
+    def group_by_state(self) -> dict[str, list[ThreadItem]]:
         """按线程状态分组，VM/GC原生线程单独放一组"""
         groups = defaultdict(list)
         for th in self.threads:

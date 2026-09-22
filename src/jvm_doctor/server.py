@@ -20,7 +20,7 @@
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
-from ._jvm import JvmError, list_jvms, run  # noqa: F401
+from ._jvm import JvmError, list_jvms, run
 from .jcmd_flag import parse_jcmd_vm_flags_all
 from .jstack_parser import JStackParser
 

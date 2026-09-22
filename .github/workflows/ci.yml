@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 测试会真起两个 JVM 靶子（G1 / Parallel）再 attach，
+      # 所以 runner 上必须是 JDK 而不是 JRE —— jcmd / jstack 只在 JDK 里。
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: 环境自检
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME"
+          "$JAVA_HOME/bin/java" -version
+          "$JAVA_HOME/bin/jcmd" -l
+
+      - run: uv sync --group dev
+
+      - name: Lint
+        run: uv run ruff check src tests
+
+      - name: 集成测试（自起 JVM 靶子）
+        run: uv run tests/test_server.py
