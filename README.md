@@ -14,10 +14,7 @@
 生产环境 400+ 线程的线程池场景会更极端
 
 ## 资源和工具
-uv sync(拆完依赖之后才成立)
-2 resource + 3 tool,各自干嘛、危险性分档
 ### Resources
-
 #### jvm://processes
 当前用户可见的 JVM 进程列表。限制仅返回10条数据
 
@@ -35,18 +32,52 @@ uv sync(拆完依赖之后才成立)
 考虑到为了避免敏感数据泄露给LLM，采用了白名单机制，仅根据白名单返回配置
 
 ### Tools
-
 #### thread_dump
 抓一次线程快照，返回归并后的视图与死锁检测结果
 
-#### gc_stat
+#### gc_stat（TBD）
 堆各代使用率、GC 次数与累计停顿
 
-#### heap_histogram
+#### heap_histogram（TBD）
 堆内对象占用 Top-N
 
+## 安装使用
 
+### 客户端配置
+#### Claude Code 集成
+.mcp.json文件里面配置mcp
 
+{
+    "mcpServers": {
+      "jvm-doctor": {
+        "command": "uvx",
+        "args": [
+          "--from",
+          "https://github.com/lxhuang0903/jvm-doctor.git",
+          "jvm-doctor"
+        ]
+      }
+    }
+}
+
+#### 其他（TBD）
+
+### 验证
+#### 本地起靶子
+JDK21下直接执行 java DemoApp.java 8080
+
+   java DemoApp.java              # 前台跑，会打印自己的 PID
+   curl localhost:8080/deadlock   # 制造死锁（jstack 会报 Found one Java-level deadlock）
+   curl localhost:8080/exhaust    # 制造线程堆积（N 个线程 BLOCKED 在同一个 monitor）
+   curl localhost:8080/leak       # 每次分配 20MB 不释放（堆直方图里 byte[] 会飙上去）
+   curl localhost:8080/status     # 看当前制造了多少病
+
+针对LLM提问，如“查看pid为1234的线程栈信息”
+
+## 调试
+MCP Inspector
+
+npx @modelcontextprotocol/inspector uvx --from https://github.com/lxhuang0903/jvm-doctor.git jvm-doctor
 
 
 

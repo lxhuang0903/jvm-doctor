@@ -5,7 +5,7 @@ description = "诊断运行中 JVM 的 MCP Server —— 把 jcmd / jstack 的�
 readme = "README.md"
 requires-python = ">=3.12"
 license = { file = "LICENSE" }
-authors = [{ name = "huangyuchao" }]
+authors = [{ name = "lxhuang0903" }]
 keywords = ["mcp", "jvm", "java", "jstack", "jcmd", "diagnostics"]
 classifiers = [
     "Programming Language :: Python :: 3.12",
@@ -17,7 +17,7 @@ dependencies = ["mcp>=2.2.0"]
 jvm-doctor = "jvm_doctor:main"
 
 [project.urls]
-Homepage = "https://github.com/huangyuchao/jvm-doctor"
+Homepage = "https://github.com/lxhuang0903/jvm-doctor"
 
 [dependency-groups]
 dev = ["ruff"]
