@@ -1,0 +1,33 @@
+[project]
+name = "jvm-doctor"
+version = "0.1.0"
+description = "诊断运行中 JVM 的 MCP Server —— 把 jcmd / jstack 的输出压成模型读得懂的形状"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+authors = [{ name = "huangyuchao" }]
+keywords = ["mcp", "jvm", "java", "jstack", "jcmd", "diagnostics"]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Debuggers",
+]
+dependencies = ["mcp>=2.2.0"]
+
+[project.scripts]
+jvm-doctor = "jvm_doctor:main"
+
+[project.urls]
+Homepage = "https://github.com/huangyuchao/jvm-doctor"
+
+[dependency-groups]
+dev = ["ruff"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jvm_doctor"]
+
+[tool.ruff]
+line-length = 100
