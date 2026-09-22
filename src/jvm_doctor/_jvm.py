@@ -100,6 +100,18 @@ def _explain(tool: str, args: tuple[str, ...], raw: str) -> str:
     low = raw.lower()
     pid = args[0] if args else "?"
 
+    # 目标 JVM 启动时带了 -XX:+DisableAttachMechanism —— 生产环境常见加固，
+    # 因为 attach 能改 manageable flag、触发 GC、dump 堆，权限过大。
+    # 这条要放在最前面：它和下面几种「换个参数再试」不同，本机制整个不可用，
+    # 换任何命令、任何子命令都一样，模型应该停手而不是重试。
+    # 附带现象：这种 JVM 在 jcmd -l 里也看不见，所以模型多半是从别处拿到的 pid。
+    if "does not support the attach mechanism" in low:
+        return (
+            f"PID {pid} 启动时关掉了 attach 机制（-XX:+DisableAttachMechanism），"
+            f"jcmd / jstack / jmap 全部不可用，换命令重试也没有意义。"
+            f"这台 JVM 只能走 JMX 或它自己暴露的监控端点。"
+        )
+
     # 同一个「pid 不存在」，各平台措辞完全不同，只能逐个枚举：
     #   macOS/JDK21   AttachNotSupportedException ... state is not ready to
     #                 participate in attach handshake  —— 字面完全猜不到
