@@ -100,10 +100,17 @@ def _explain(tool: str, args: tuple[str, ...], raw: str) -> str:
     low = raw.lower()
     pid = args[0] if args else "?"
 
-    # 实测：macOS/JDK21 上给一个不存在的 pid，报的不是 "No such process"，
-    # 而是 AttachNotSupportedException ... state is not ready to participate
-    # in attach handshake。光看字面完全猜不到是「进程不存在」。
-    if "not ready to participate" in low or "no such process" in low:
+    # 同一个「pid 不存在」，各平台措辞完全不同，只能逐个枚举：
+    #   macOS/JDK21   AttachNotSupportedException ... state is not ready to
+    #                 participate in attach handshake  —— 字面完全猜不到
+    #   Linux/JDK21   java.io.IOException: non existent JVM pid: 999999
+    # Linux 那条是 CI 上线第一天抓到的：macOS 本地 44 项全绿，同样的用例在
+    # Linux 上掉进兜底分支，模型拿到的是半截 Java 栈而不是能据以行动的人话。
+    if (
+        "not ready to participate" in low
+        or "no such process" in low
+        or "non existent jvm pid" in low
+    ):
         return f"PID {pid} 不存在、已退出，或者它根本不是 JVM。先列一遍当前 JVM 进程再试。"
 
     # 目标进程属于别的用户 / 别的 PID namespace

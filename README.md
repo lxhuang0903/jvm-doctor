@@ -1,5 +1,7 @@
 # jvm-doctor
 
+[![CI](https://github.com/lxhuang0903/jvm-doctor/actions/workflows/ci.yml/badge.svg)](https://github.com/lxhuang0903/jvm-doctor/actions/workflows/ci.yml)
+
 ## 概述
 这是一个诊断运行中 JVM 的 MCP Server。封装了资源和工具便于为LLM提供运行时JVM信息，以便LLM进行诊断
 
