@@ -6,8 +6,6 @@ import com.sun.tools.attach.VirtualMachine;
 import com.sun.tools.attach.VirtualMachineDescriptor;
 import org.springframework.ai.mcp.annotation.McpArg;
 import org.springframework.ai.mcp.annotation.McpResource;
-import org.springframework.ai.mcp.annotation.McpTool;
-import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -18,13 +16,14 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * 脚手架自检：证明 tool 和 resource 两条注册路径都通。
+ * MCP resource 出口。
  *
- * <p>真正的实现替换掉这里即可。注意和 Python 侧一样，resource 的参数从 URI 里抠出来，
- * 天然是 String；tool 的参数走 JSON Schema，声明成什么类型就会被强制转成什么。
+ * <p>resource 的参数从 URI 模板里抠出来，天然是 String —— 这一点和 Python 侧一致。
+ * 绑定靠参数名反射，所以要么编译时带 {@code -parameters}，要么在
+ * {@code @McpArg(name = ...)} 里显式写，见 README。
  */
 @Component
-public class SmokeEndpoints {
+public class JvmResources {
 
     /** 对应 Python 侧的 jvm://processes。VirtualMachine.list() 直接给对象，不用解析 jcmd -l。 */
     @McpResource(uri = "jvm://processes", name = "processes",
@@ -97,12 +96,4 @@ public class SmokeEndpoints {
             return e.getMessage();
         }
     }
-
-    /** 脚手架冒烟用，确认 tool 注册链路通。实现 thread_dump 时删掉。 */
-    @McpTool(name = "ping", description = "自检用：原样回显，确认 tool 链路可用")
-    public String ping(@McpToolParam(description = "任意文本") String text) {
-        return "pong: " + text;
-    }
-
-    
 }
