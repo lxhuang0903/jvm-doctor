@@ -120,6 +120,9 @@ cd java && mvn package -DskipTests
 java -jar target/jvm-doctor-java-0.1.0.jar     # stdio，等客户端连
 ```
 
+出口和 Python 侧对齐：resource `jvm://processes` / `jvm://{pid}/flags` /
+`jvm://{pid}/properties`，tool `thread_dump`。
+
 依赖 Spring Boot 4.1.1 + Spring AI 2.0.1。注意 `@McpTool` / `@McpResource`
 这套注解在 `spring-ai-mcp-annotations` 里，1.0.0 没有，2.0.x 才有；查版本要读
 `maven-metadata.xml`，Maven Central 的搜索接口给的 latestVersion 是陈的。
@@ -166,6 +169,37 @@ JMX 把 unsigned 64 位截断成了有符号值。`-2` 比 `2⁶⁴−2` 更难�
 公司已有的 parent pom、或用 Gradle / IDE 直接编译时会失效。更稳的写法是在
 `@McpArg(name = "pid")` / `@McpToolParam(name = "...")` 里显式写名字。
 Python 侧没有这个问题 —— 参数名在运行时永远可读。
+
+### 交叉验证：两条路径等价
+
+同一个靶子（先 `curl /deadlock` 和 `/exhaust?workers=200`），两个实现各跑一次
+`thread_dump`：
+
+| | Python（解析 jstack 文本） | Java（ThreadMXBean） |
+| --- | --- | --- |
+| 原始输入 | 120,197 B / 1,882 行 | 不适用（拿的是对象） |
+| 报告 | 9,651 B / 229 行 | 7,710 B / 153 行 |
+| **最大归并组** | **x200** | **x200** |
+| **死锁检出** | **deadlock-1-A / B** | **deadlock-1-A / B** |
+| Java 线程 | 219 | 216 |
+| GC / VM 原生线程 | 18 | **0** |
+
+**最大归并组和死锁两边一致 —— 这就是「归并判据等价」的证据。** 组数或最大组对不上，
+说明有一边的签名算错了，而且能立刻定位是哪一边。
+
+剩下的差异都能解释：219 vs 216 是两次调用之间有几个临时 worker 超时退出了；
+原生线程 18 vs 0 是机制差异（`ThreadMXBean` 只返回 Java 线程），这也是 Java 侧报告
+更短的主要原因。
+
+Java 侧这个出口还省掉两件事：死锁的等待关系是 `getLockName()` + `getLockOwnerName()`
+直接拼的，不用从 `Found one Java-level deadlock` 段落里解析 monitor 地址再和主体的栈
+对应（Python 侧还得处理「死锁段的栈会重复出现」这个坑）；栈深度截断是
+`dumpAllThreads(true, true, 10)` 的第三个参数，JMX 自带。
+
+但**归并本身两边都要自己写** —— 包括那个「无栈线程必须用线程名兜底」的判据：
+Signal Dispatcher / Attach Listener / DestroyJavaVM 都没有栈，只用空签名会把它们
+错误地合并成「N 个线程卡在同一处」（Python 侧实测合出过一组 x8）。MXBean 给对象，
+不给结论。
 
 ### 已知限制：stdout 污染没有机制保护
 
